@@ -1,19 +1,68 @@
-```mermaid
 graph TD
-    %% High-Level Architecture
-    Sensor["IoT Sensor Node"] -->|"MQTT / Zigbee"| Gateway["Edge Gateway"]
-    Gateway -->|"HTTPS (JSON)"| Backend["Node.js API"]
-    
-    subgraph Cloud Infrastructure
-        Backend -->|"Write Logs"| DB[("PostgreSQL")]
-        Backend -->|"Async Task"| ML["Python ML Service"]
-        ML -->|"Update Prediction"| DB
+    %% 1. Data Sources Layer
+    subgraph Data_Sources [Data Sources]
+        direction TB
+        IoT[IoT Sensors MQTT]
+        Admin[Admin Upload CSV]
+        ThirdParty[3rd Party API]
+        
+        Ingest[Ingestion Service]
+        
+        IoT -->|Raw Telemetry| Ingest
+        Admin -->|Batch Data| Ingest
+        ThirdParty -->|External Data| Ingest
     end
-    
-    subgraph Frontend
-        Dashboard["React Dashboard"] -->|"REST API"| Backend
+
+    %% 2. Backend System Layer
+    subgraph Backend_System [Backend System Express]
+        direction TB
+        Monitor[Monitoring Service]
+        Core[Core API Logic]
+        Auth[Auth Middleware]
+        
+        Monitor -.->|Logs| Core
     end
-```
+
+    %% 3. Frontend Layer
+    subgraph Frontend_Dashboard [Frontend Dashboard]
+        React[React + Tailwind App]
+    end
+
+    %% 4. Storage Layer
+    subgraph Storage_Layer [Storage Layer]
+        direction TB
+        DB[(PostgreSQL)]
+        StructTables[Structured Tables<br/>Users/Trucks]
+        JSONLogs[JSONB Logs<br/>Sensor Data]
+    end
+
+    %% 5. Intelligence Layer
+    subgraph Intelligence_Layer [Intelligence Layer]
+        ML[ML Worker Python]
+    end
+
+    %% --- CROSS-LAYER CONNECTIONS ---
+
+    %% Ingestion to Backend
+    Ingest -->|Sanitized Data| Core
+
+    %% Frontend to Backend Interaction
+    React -->|HTTPS Request| Auth
+    Auth -->|Authorized| Core
+    Core -->|RBAC Check| Auth
+    Core -->|JSON Response| React
+
+    %% Backend to Storage
+    Core -->|Read/Write| DB
+
+    %% Intelligence to Storage Loop
+    DB -.->|Fetch Data| ML
+    ML -.->|Write Predictions| DB
+
+    %% Styling for better visibility
+    style DB fill:#ff99ff,stroke:#333,stroke-width:2px
+    style React fill:#99ff99,stroke:#333,stroke-width:2px
+    style ML fill:#ccccff,stroke:#333,stroke-width:2px
 2. Architecture Trade-offs
 Monolith vs. Microservices Architecture
 
@@ -57,5 +106,6 @@ ML Pipeline: Python
 Why? (Standardization): Python is the industry standard for Data Science. We run it as a standalone service so the ML intern can work in their native environment without needing to learn JavaScript/Node.js.
 
 Hosting: Render / Railway
+
 
 Why? (Zero Ops): As a Founding Engineer, I want to focus on code, not server management. These platforms offer "Git-Push-to-Deploy," allowing interns to deploy their own preview environments easily
